@@ -1440,6 +1440,7 @@ func runTest(statusChan chan statusMsg, test *testCase, shimPath string, mallocN
 	}()
 
 	var flags []string
+	flags = append(flags, "-test-name", test.name)
 	if test.testType == serverTest {
 		flags = append(flags, "-server")
 
