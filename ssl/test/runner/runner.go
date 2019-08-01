@@ -1117,7 +1117,7 @@ func doExchange(test *testCase, config *Config, conn net.Conn, isResume bool, tr
 		}
 
 		for i := 0; i < test.sendWarningAlerts; i++ {
-			tlsConn.SendAlert(alertLevelWarning, alertUnexpectedMessage)
+			tlsConn.SendAlert(alertLevelWarning, alertInternalError)
 		}
 
 		for i := 0; i < test.sendUserCanceledAlerts; i++ {
@@ -2497,7 +2497,7 @@ read alert 1 0
 					ReorderHandshakeFragments: true,
 					// Small enough that every handshake message is
 					// fragmented.
-					MaxHandshakeRecordLength: 2,
+					MaxHandshakeRecordLength: 3,
 				},
 			},
 		},
@@ -2520,7 +2520,7 @@ read alert 1 0
 				Bugs: ProtocolBugs{
 					ReorderHandshakeFragments:       true,
 					MixCompleteMessageWithFragments: true,
-					MaxHandshakeRecordLength:        2,
+					MaxHandshakeRecordLength:        3,
 				},
 			},
 		},
@@ -3193,7 +3193,7 @@ read alert 1 0
 			name:     "DTLS-SendExtraFinished-Reordered",
 			config: Config{
 				Bugs: ProtocolBugs{
-					MaxHandshakeRecordLength:  2,
+					MaxHandshakeRecordLength:  3,
 					ReorderHandshakeFragments: true,
 					SendExtraFinished:         true,
 				},
