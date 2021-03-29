@@ -6340,14 +6340,14 @@ func addVersionNegotiationTests() {
 		name:     "ConflictingVersionNegotiation",
 		config: Config{
 			Bugs: ProtocolBugs{
-				SendClientVersion:          VersionTLS12,
-				SendSupportedVersions:      []uint16{VersionTLS11},
+				SendClientVersion:          VersionTLS11,
+				SendSupportedVersions:      []uint16{VersionTLS12},
 				IgnoreTLS13DowngradeRandom: true,
 			},
 		},
 		// The extension takes precedence over the ClientHello version.
 		expectations: connectionExpectations{
-			version: VersionTLS11,
+			version: VersionTLS12,
 		},
 	})
 
@@ -9362,7 +9362,7 @@ func addRenegotiationTests() {
 		name:        "Renegotiate-SameClientVersion",
 		renegotiate: 1,
 		config: Config{
-			MaxVersion: VersionTLS10,
+			MaxVersion: VersionTLS12,
 			Bugs: ProtocolBugs{
 				RequireSameRenegoClientVersion: true,
 			},
@@ -11278,7 +11278,7 @@ func addRSAClientKeyExchangeTests() {
 				// Ensure the ClientHello version and final
 				// version are different, to detect if the
 				// server uses the wrong one.
-				MaxVersion:   VersionTLS11,
+				MaxVersion:   VersionTLS12,
 				CipherSuites: []uint16{TLS_RSA_WITH_3DES_EDE_CBC_SHA},
 				Bugs: ProtocolBugs{
 					BadRSAClientKeyExchange: bad,
