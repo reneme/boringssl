@@ -1421,12 +1421,19 @@ func doExchanges(test *testCase, shim *shimProcess, resumeCount int, transcripts
 	return nil
 }
 
+func isLooseErrorTest(testName string) bool {
+	if _, ok := shimConfig.LooseErrorTests[testName]; ok {
+		return true
+	}
+	return false
+}
+
 func translateExpectedError(testName string, errorStr string) string {
 	if translated, ok := shimConfig.ErrorMap[errorStr]; ok {
 		return translated
 	}
 
-	if _, ok := shimConfig.LooseErrorTests[testName]; ok {
+	if isLooseErrorTest(testName) {
 		return ""
 	}
 
@@ -1714,7 +1721,7 @@ func runTest(statusChan chan statusMsg, test *testCase, shimPath string, mallocN
 	if localErr != nil {
 		localErrString = localErr.Error()
 	}
-	if len(test.expectedLocalError) != 0 {
+	if !isLooseErrorTest(test.name) && len(test.expectedLocalError) != 0 {
 		correctFailure = correctFailure && strings.Contains(localErrString, test.expectedLocalError)
 	}
 
