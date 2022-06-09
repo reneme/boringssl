@@ -1895,6 +1895,14 @@ func isTLS13Suite(suiteName string) bool {
 	return !hasComponent(suiteName, "WITH")
 }
 
+func suiteSupportsPSK(suiteName string) bool {
+	return isTLS13Suite(suiteName) || hasComponent(suiteName, "PSK")
+}
+
+func suiteRequiresPSK(suiteName string) bool {
+	return hasComponent(suiteName, "PSK")
+}
+
 func bigFromHex(hex string) *big.Int {
 	ret, ok := new(big.Int).SetString(hex, 16)
 	if !ok {
@@ -3647,14 +3655,26 @@ read alert 1 0
 	})
 }
 
-func addTestForCipherSuite(suite testCipherSuite, ver tlsVersion, protocol protocol) {
+func addTestForCipherSuite(suite testCipherSuite, ver tlsVersion, protocol protocol, with_psk bool) {
 	const psk = "12345"
 	const pskIdentity = "luggage combo"
 
 	if !ver.supportsProtocol(protocol) {
 		return
 	}
-	prefix := protocol.String() + "-"
+	if with_psk && !suiteSupportsPSK(suite.name) {
+		// cannot test PSK with a suite that does not support PSK and vice versa
+		return
+	}
+	if !with_psk && suiteRequiresPSK(suite.name) {
+		// must use PSK for suites that require it
+		return
+	}
+
+	var prefix = protocol.String() + "-"
+	if (with_psk) {
+		prefix = prefix + "PSK-"
+	}
 
 	var cert Certificate
 	var certFile string
@@ -3670,7 +3690,7 @@ func addTestForCipherSuite(suite testCipherSuite, ver tlsVersion, protocol proto
 	}
 
 	var flags []string
-	if hasComponent(suite.name, "PSK") {
+	if with_psk {
 		flags = append(flags,
 			"-psk", psk,
 			"-psk-identity", pskIdentity)
@@ -3724,7 +3744,7 @@ func addTestForCipherSuite(suite testCipherSuite, ver tlsVersion, protocol proto
 		certFile:             certFile,
 		keyFile:              keyFile,
 		flags:                flags,
-		resumeSession:        true,
+		resumeSession:        !with_psk,
 		shouldFail:           shouldFail,
 		expectedError:        expectedServerError,
 		exportKeyingMaterial: exportKeyingMaterial,
@@ -3744,10 +3764,11 @@ func addTestForCipherSuite(suite testCipherSuite, ver tlsVersion, protocol proto
 			Bugs: ProtocolBugs{
 				IgnorePeerCipherPreferences: shouldFail,
 				SendCipherSuite:             sendCipherSuite,
+				EmptyCertificateList:		 !shouldFail && with_psk, // successful PSK-based handshakes must not use certificates!
 			},
 		},
 		flags:                flags,
-		resumeSession:        true,
+		resumeSession:        !with_psk,
 		shouldFail:           shouldFail,
 		expectedError:        expectedClientError,
 		exportKeyingMaterial: exportKeyingMaterial,
@@ -3768,6 +3789,9 @@ func addTestForCipherSuite(suite testCipherSuite, ver tlsVersion, protocol proto
 			Certificates:         []Certificate{cert},
 			PreSharedKey:         []byte(psk),
 			PreSharedKeyIdentity: pskIdentity,
+			Bugs: ProtocolBugs {
+				EmptyCertificateList: with_psk, // successful PSK-based handshakes must not use certificates!
+			},
 		},
 		flags:      flags,
 		messageLen: maxPlaintext,
@@ -3811,7 +3835,9 @@ func addCipherSuiteTests() {
 	for _, suite := range testCipherSuites {
 		for _, ver := range tlsVersions {
 			for _, protocol := range []protocol{tls, dtls, quic} {
-				addTestForCipherSuite(suite, ver, protocol)
+				for _, psk := range []bool{true, false} {
+					addTestForCipherSuite(suite, ver, protocol, psk)
+				}
 			}
 		}
 	}
